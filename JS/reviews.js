@@ -1,5 +1,3 @@
-const STEAM_ID = '76561198440636739';
-const API_KEY = '7521F7BE7A34DAD05626A9C5D181CE01';
 const GAMES_PER_PAGE = 24;
 
 let allGames = [];
@@ -152,33 +150,12 @@ const myReviews = {
 
 async function loadGames() {
     const grid = document.getElementById('gamesGrid');
-    const apiUrl = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${API_KEY}&steamid=${STEAM_ID}&include_appinfo=true&format=json`;
-
-    // Пробуем два разных прокси по очереди — на случай если один из них недоступен
-    const proxies = [
-        // corsproxy.io возвращает ответ напрямую, без обёртки
-        async () => {
-            const r = await fetch(`https://corsproxy.io/?${encodeURIComponent(apiUrl)}`);
-            const data = await r.json();
-            return data.response.games;
-        },
-        // allorigins оборачивает ответ в { contents: "..." }
-        async () => {
-            const r = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`);
-            const data = await r.json();
-            return JSON.parse(data.contents).response.games;
-        },
-    ];
 
     let games = null;
-    for (const tryProxy of proxies) {
-        try {
-            games = await tryProxy();
-            if (games) break;
-        } catch {
-            // Этот прокси не сработал — пробуем следующий
-        }
-    }
+    try {
+        const r = await fetch('/api/steam-games');
+        if (r.ok) games = await r.json();
+    } catch {}
 
     if (!games) {
         grid.innerHTML = '<p class="loading-text">Не удалось загрузить игры. Проверь интернет и обнови страницу.</p>';

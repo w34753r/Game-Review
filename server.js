@@ -84,7 +84,14 @@ function getSession(cookieHeader) {
     const token = parseCookies(cookieHeader).session;
     if (!token) return null;
     const sessions = readJson(SESSIONS_FILE, {});
-    return sessions[token] ? { token, ...sessions[token] } : null;
+    const session = sessions[token];
+    if (!session) return null;
+    if (Date.now() - new Date(session.createdAt).getTime() > 30 * 24 * 60 * 60 * 1000) {
+        delete sessions[token];
+        writeJson(SESSIONS_FILE, sessions);
+        return null;
+    }
+    return { token, ...session };
 }
 
 function deleteSession(token) {
@@ -106,7 +113,12 @@ function parseCookies(header) {
 function readBody(req) {
     return new Promise((resolve, reject) => {
         let body = '';
-        req.on('data', chunk => body += chunk);
+        let size = 0;
+        req.on('data', chunk => {
+            size += chunk.length;
+            if (size > 16 * 1024) { req.destroy(); return reject(new Error('body too large')); }
+            body += chunk;
+        });
         req.on('end', () => { try { resolve(JSON.parse(body)); } catch { resolve({}); } });
         req.on('error', reject);
     });
@@ -304,6 +316,20 @@ http.createServer(async (req, res) => {
         return json(res, 200, { ok: true });
     }
 
+    // GET /api/steam-games
+    if (method === 'GET' && url === '/api/steam-games') {
+        try {
+            const STEAM_API_KEY = '7521F7BE7A34DAD05626A9C5D181CE01';
+            const STEAM_ID = '76561198440636739';
+            const apiUrl = `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=${STEAM_API_KEY}&steamid=${STEAM_ID}&include_appinfo=true&format=json`;
+            const data = await fetchUrl(apiUrl);
+            const parsed = JSON.parse(data);
+            return json(res, 200, parsed.response?.games || []);
+        } catch (err) {
+            return json(res, 500, { error: 'Не удалось загрузить игры' });
+        }
+    }
+
     // GET /api/news
     if (method === 'GET' && url === '/api/news') {
         try {
@@ -333,6 +359,10 @@ http.createServer(async (req, res) => {
 
     // Статические файлы
     const filePath = path.join(ROOT, url);
+    const blocked = ['data', '.claude'].map(d => path.join(ROOT, d) + path.sep);
+    if (!filePath.startsWith(ROOT + path.sep) || blocked.some(b => filePath.startsWith(b))) {
+        res.writeHead(403); res.end('Forbidden'); return;
+    }
     fs.readFile(filePath, (err, data) => {
         if (err) { res.writeHead(404); res.end('Not found'); return; }
         const ext = path.extname(filePath);
