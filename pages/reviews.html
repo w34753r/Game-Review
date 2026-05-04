@@ -1,0 +1,36 @@
+    <main class="main">
+        <div class="container">
+            <h1 class="page-title">Игровые рецензии</h1>
+
+            <div class="search-section">
+                <input
+                    type="text"
+                    class="search-input"
+                    id="searchInput"
+                    placeholder="Поиск по названию..."
+                >
+                <div class="genre-filters" id="genreFilters"></div>
+            </div>
+
+            <div class="games-grid" id="gamesGrid">
+                <p class="loading-text">Загрузка игр...</p>
+            </div>
+        </div>
+    </main>
+
+<div class="drawer-overlay" id="drawerOverlay"></div>
+
+<div class="drawer" id="drawer">
+    <button class="drawer_close" id="drawerClose">✕</button>
+    <div class="drawer_body">
+        <img class="drawer_cover" id="drawerCover" src="" alt="">
+        <div class="drawer_content">
+            <h2 class="drawer_title" id="drawerTitle"></h2>
+            <p class="drawer_meta" id="drawerMeta"></p>
+            <div class="drawer_score" id="drawerScore"></div>
+            <div class="drawer_text" id="drawerText"></div>
+        </div>
+    </div>
+</div>
+
+<script src="/JS/reviews.js"></script>
